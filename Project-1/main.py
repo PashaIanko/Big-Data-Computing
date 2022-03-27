@@ -60,6 +60,51 @@ def print_top(productRDD, top_n):
     for item in top_list:
         print(f'Product ID: {item[0]}, Popularity: {item[1]}')
 
+def do_partition(client_log, n_partitions):
+    return (rand.randint(0, n_partitions - 1), client_log)
+
+def gather_unique_pairs(pairs, country):
+    prod_customer_dict = {}
+
+    rand_key, client_logs = pairs[0], pairs[1]
+
+    for log in client_logs:
+
+        features = log.split(',')
+        quantity = features[3]
+        if (int(quantity) > 0) and (country == 'all' or country == features[-1]):  # quantity
+            product = features[1]
+            customer = features[6]
+
+            if product in prod_customer_dict.keys():
+               if not (customer in prod_customer_dict[product]):
+                   prod_customer_dict[product].append(customer)
+            else:
+               prod_customer_dict[product] = [customer]
+
+    res = []
+    for productID, customers in prod_customer_dict.items():
+        for customer in customers:
+            res.append((productID, customer))
+    return res
+
+def calc_popularity(pairs):
+    popularity_dict = {}
+
+    for pair in pairs:
+        product, customer = pair[0], pair[1]
+        if product in popularity_dict.keys():
+            if customer not in popularity_dict[product]:
+                popularity_dict[product].append(customer)
+        else:
+            popularity_dict[product] = [customer]
+
+    return [(product, len(customers)) for product, customers in popularity_dict.items()]
+
+def count_popularity(pair):
+    rand_idx, prod_customer_pairs = pair[0], pair[1]
+    return calc_popularity(prod_customer_pairs)
+
 
 def main(argv):
     # check correctness
@@ -81,75 +126,43 @@ def main(argv):
     print(f'Number of rows = {rawData.count()}')
 
     # 2. productCustomer
-    # first, to keep space safe, we will filter data.
-    # filter returns new RDD
-    # Split into distinct 'columns' & filter for quantity > 0
-    # & for country == 'S'
-
     # Logic:
     # 1. Random partitioning into K groups
     # 2. Within each group, split item and do filtering before looking for distinct pairs
     # 3. Within each group, look for distinct product - customer pairs --> return them
-    # 4. Reduce by key
-
-    def do_partition(client_log, n_partitions):
-        return (rand.randint(0, n_partitions - 1), client_log)
-
-    def gather_unique_pairs(pairs, country):
-        prod_customer_dict = {}
-
-        rand_key, client_logs = pairs[0], pairs[1]
-        for log in client_logs:
-            features = log.split(',')
-
-            if (int(features[3]) > 0) and (country == 'all' or country == features[-1]):  # quantity
-                product_customer_pair = f'{features[1]} {features[6]}'
-                if product_customer_pair in prod_customer_dict.keys():
-                    prod_customer_dict[product_customer_pair] += 1
-                else:
-                    prod_customer_dict[product_customer_pair] = 1
-
-        return list(prod_customer_dict.items())
-
-
+    # 4. We dont need reduce by key here
     productCustomer = rawData.map(lambda client_log: do_partition(client_log, k))
     productCustomer = productCustomer.groupByKey()
     productCustomer = productCustomer.flatMap(lambda group: gather_unique_pairs(group, s))
-    productCustomer = productCustomer.reduceByKey(lambda x, y: x + y)
     print(f'Product-Customer Pairs = {productCustomer.count()}')
 
-    # rawData = rawData.map(lambda doc: doc.split(','))
-    # rawData = filter_data(rawData, s)
-    #
-    # # Map into pairs product ID -- customer ID.
-    # # We will be reducing by key, so we dont need any value
-    # # in the key-val pair --> we substitute it with default 0
-    # rawData = rawData.map(lambda item: ((f'{item[1]}, {item[6]}'), 0))
-    #
-    # # Distinct pairs of product -- customer
-    # productCustomer = rawData.reduceByKey(lambda x, y: x + y).map(
-    #     lambda item: (item[0].split(',')[0], int(item[0].split(',')[1]))
-    # )
-    # print(f'Product-Customer Pairs = {productCustomer.count()}')
-    #
-    # # 3. Product popularity with mapPartitionsToPair / mapPartitions
-    # # Make partitions
-    # productPopularity1 = productCustomer.map(lambda item: (rand.randint(0, k - 1), item))
-    # productPopularity1 = productPopularity1.mapPartitions(gather_unique_customers)
-    # productPopularity1 = productPopularity1.groupByKey()
-    # productPopularity1 = productPopularity1.mapValues(lambda vals: sum(vals))
-    # print(f'productPopularity1:')
-    # print_output(productPopularity1.collect())
-    # print('\n')
-    #
-    # # 4. Product popularity with map / mapToPair / reduceByKey methods
-    # productPopularity2 = productCustomer \
-    #     .map(lambda item: (item[0], 1)) \
-    #     .reduceByKey(lambda x, y: x + y)
-    # print(f'productPopularity2:')
-    # print_output(productPopularity2.collect())
-    # print('\n')
-    #
+
+    # 3. Product popularity:
+    # 1. MapPartitions: calc number of unique customers, buying the product, group by
+    # key and calc sum
+    productPopularity1 = productCustomer\
+        .mapPartitions(lambda pairs: calc_popularity(pairs))\
+        .groupByKey()\
+        .mapValues(lambda n_customers: sum(n_customers))
+
+    print(f'productPopularity1:')
+    print_output(productPopularity1.collect())
+    print('\n')
+
+    # 4. Product popularity with map / mapToPair / reduceByKey methods
+    # Logic:
+    # 1. Random partitioning 0 .. N-1
+    # 2. Group by random key
+    # 3. flatMap with products popularity
+    # 4. reduceByKey
+    productPopularity2 = productCustomer.map(lambda item: (rand.randint(0, k - 1), item))
+    productPopularity2 = productPopularity2.groupByKey()
+    productPopularity2 = productPopularity2.flatMap(count_popularity)
+    productPopularity2 = productPopularity2.reduceByKey(lambda x, y: x + y)
+    print(f'productPopularity2:')
+    print_output(productPopularity2.collect())
+    print('\n')
+
     # # 5. Extract top h values
     # if h > 0:
     #     print(f'Top {h} popular products:\n')
