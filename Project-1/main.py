@@ -163,17 +163,17 @@ def main(argv):
     print_output(productPopularity2.collect())
     print('\n')
 
-    # # 5. Extract top h values
-    # if h > 0:
-    #     print(f'Top {h} popular products:\n')
-    #     print_top(productPopularity1, h)
-    #
-    # # 6. If h == 0
-    # if h == 0:
-    #     print(f'Ordered pairs for popularity 1:\n')
-    #     print_ordered_pairs(productPopularity1.collect())
-    #     print(f'Ordered pairs for popularity 2:\n')
-    #     print_ordered_pairs(productPopularity2.collect())
+    # 5. Extract top h values
+    if h > 0:
+        print(f'Top {h} popular products:\n')
+        print_top(productPopularity1, h)
+
+    # 6. If h == 0
+    if h == 0:
+        print(f'Ordered pairs for popularity 1:\n')
+        print_ordered_pairs(productPopularity1.collect())
+        print(f'Ordered pairs for popularity 2:\n')
+        print_ordered_pairs(productPopularity2.collect())
 
 
 if __name__ == "__main__":
