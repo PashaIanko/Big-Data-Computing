@@ -18,17 +18,18 @@ def check_input(args):
     assert h.isdigit(), 'Incorrect H (expect number)'
     assert os.path.isfile(data_path), 'Cannot access file, check directory'
 
+
 def filter_data(RDD, country):
     filtered = RDD.filter(
         lambda item: int(item[3]) > 0
     )
-
     if country == 'all':
         return filtered
     else:
         return filtered.filter(
             lambda item: item[-1] == country
         )
+
 
 def gather_unique_customers(pairs):
     prod_preference = {}
@@ -42,19 +43,23 @@ def gather_unique_customers(pairs):
             prod_preference[product] += 1
     return list(prod_preference.items())
 
+
 def print_output(popularity_items):
     sort = sorted(popularity_items, key=lambda x: int(x[0]))
     for item in sort:
         print(f'Product: {item[0]}, popularity: {item[1]}')
 
+
 def print_ordered_pairs(items_list):
     for item in sorted(items_list, key=lambda item: int(item[0])):
         print(item)
+
 
 def print_top(productRDD, top_n):
     top_list = productRDD.top(top_n, key=lambda x: x[1])
     for item in top_list:
         print(f'Product ID: {item[0]}, Popularity: {item[1]}')
+
 
 def main(argv):
     # check correctness
@@ -76,51 +81,86 @@ def main(argv):
     print(f'Number of rows = {rawData.count()}')
 
     # 2. productCustomer
-    # first, to keep space safe, we will filter data. filter returns
-    # new RDD
-    rawData = rawData.map(lambda doc: doc.split(','))
-    rawData = filter_data(rawData, s)
+    # first, to keep space safe, we will filter data.
+    # filter returns new RDD
+    # Split into distinct 'columns' & filter for quantity > 0
+    # & for country == 'S'
 
-    # Map into pairs product ID -- customer ID.
-    # We will be reducing by key, so we dont need any value
-    # in the key-val pair --> we substitute it with default 0
-    rawData = rawData.map(lambda item: ((f'{item[1]}, {item[6]}'), 0))
+    # Logic:
+    # 1. Random partitioning into K groups
+    # 2. Within each group, split item and do filtering before looking for distinct pairs
+    # 3. Within each group, look for distinct product - customer pairs --> return them
+    # 4. Reduce by key
 
-    # Distinct pairs of product -- customer
-    productCustomer = rawData.reduceByKey(lambda x, y: x + y).map(
-        lambda item: (item[0].split(',')[0], int(item[0].split(',')[1]))
-    )
+    def do_partition(client_log, n_partitions):
+        return (rand.randint(0, n_partitions - 1), client_log)
+
+    def gather_unique_pairs(pairs, country):
+        prod_customer_dict = {}
+
+        rand_key, client_logs = pairs[0], pairs[1]
+        for log in client_logs:
+            features = log.split(',')
+
+            if (int(features[3]) > 0) and (country == 'all' or country == features[-1]):  # quantity
+                product_customer_pair = f'{features[1]} {features[6]}'
+                if product_customer_pair in prod_customer_dict.keys():
+                    prod_customer_dict[product_customer_pair] += 1
+                else:
+                    prod_customer_dict[product_customer_pair] = 1
+
+        return list(prod_customer_dict.items())
+
+
+    productCustomer = rawData.map(lambda client_log: do_partition(client_log, k))
+    productCustomer = productCustomer.groupByKey()
+    productCustomer = productCustomer.flatMap(lambda group: gather_unique_pairs(group, s))
+    productCustomer = productCustomer.reduceByKey(lambda x, y: x + y)
     print(f'Product-Customer Pairs = {productCustomer.count()}')
 
-    # 3. Product popularity with mapPartitionsToPair / mapPartitions
-    # Make partitions
-    productPopularity1 = productCustomer.map(lambda item: (rand.randint(0, k - 1), item))
-    productPopularity1 = productPopularity1.mapPartitions(gather_unique_customers)
-    productPopularity1 = productPopularity1.groupByKey()
-    productPopularity1 = productPopularity1.mapValues(lambda vals: sum(vals))
-    print(f'productPopularity1:')
-    print_output(productPopularity1.collect())
-    print('\n')
-
-    # 4. Product popularity with map / mapToPair / reduceByKey methods
-    productPopularity2 = productCustomer\
-            .map(lambda item: (item[0], 1))\
-            .reduceByKey(lambda x, y: x + y)
-    print(f'productPopularity2:')
-    print_output(productPopularity2.collect())
-    print('\n')
-
-    # 5. Extract top h values
-    if h > 0:
-        print(f'Top {h} popular products:\n')
-        print_top(productPopularity1, h)
-
-    # 6. If h == 0
-    if h == 0:
-        print(f'Ordered pairs for popularity 1:\n')
-        print_ordered_pairs(productPopularity1.collect())
-        print(f'Ordered pairs for popularity 2:\n')
-        print_ordered_pairs(productPopularity2.collect())
+    # rawData = rawData.map(lambda doc: doc.split(','))
+    # rawData = filter_data(rawData, s)
+    #
+    # # Map into pairs product ID -- customer ID.
+    # # We will be reducing by key, so we dont need any value
+    # # in the key-val pair --> we substitute it with default 0
+    # rawData = rawData.map(lambda item: ((f'{item[1]}, {item[6]}'), 0))
+    #
+    # # Distinct pairs of product -- customer
+    # productCustomer = rawData.reduceByKey(lambda x, y: x + y).map(
+    #     lambda item: (item[0].split(',')[0], int(item[0].split(',')[1]))
+    # )
+    # print(f'Product-Customer Pairs = {productCustomer.count()}')
+    #
+    # # 3. Product popularity with mapPartitionsToPair / mapPartitions
+    # # Make partitions
+    # productPopularity1 = productCustomer.map(lambda item: (rand.randint(0, k - 1), item))
+    # productPopularity1 = productPopularity1.mapPartitions(gather_unique_customers)
+    # productPopularity1 = productPopularity1.groupByKey()
+    # productPopularity1 = productPopularity1.mapValues(lambda vals: sum(vals))
+    # print(f'productPopularity1:')
+    # print_output(productPopularity1.collect())
+    # print('\n')
+    #
+    # # 4. Product popularity with map / mapToPair / reduceByKey methods
+    # productPopularity2 = productCustomer \
+    #     .map(lambda item: (item[0], 1)) \
+    #     .reduceByKey(lambda x, y: x + y)
+    # print(f'productPopularity2:')
+    # print_output(productPopularity2.collect())
+    # print('\n')
+    #
+    # # 5. Extract top h values
+    # if h > 0:
+    #     print(f'Top {h} popular products:\n')
+    #     print_top(productPopularity1, h)
+    #
+    # # 6. If h == 0
+    # if h == 0:
+    #     print(f'Ordered pairs for popularity 1:\n')
+    #     print_ordered_pairs(productPopularity1.collect())
+    #     print(f'Ordered pairs for popularity 2:\n')
+    #     print_ordered_pairs(productPopularity2.collect())
 
 
 if __name__ == "__main__":
@@ -131,5 +171,4 @@ if __name__ == "__main__":
     argv = ['4', '2', 'Italy', './sample_50.csv']
 
     main(argv)
-    # test another branch
     # main(sys.argv)
