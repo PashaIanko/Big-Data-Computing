@@ -131,11 +131,11 @@ def main(argv):
     # 2. Within each group, split item and do filtering before looking for distinct pairs
     # 3. Within each group, look for distinct product - customer pairs --> return them
     # 4. We dont need reduce by key here
-    productCustomer = rawData.map(lambda client_log: do_partition(client_log, k))
-    productCustomer = productCustomer.groupByKey()
-    productCustomer = productCustomer.flatMap(lambda group: gather_unique_pairs(group, s))
+    productCustomer = rawData\
+        .map(lambda client_log: do_partition(client_log, k))\
+        .groupByKey()\
+        .flatMap(lambda group: gather_unique_pairs(group, s))
     print(f'Product-Customer Pairs = {productCustomer.count()}')
-
 
     # 3. Product popularity:
     # 1. MapPartitions: calc number of unique customers, buying the product, group by
@@ -155,10 +155,11 @@ def main(argv):
     # 2. Group by random key
     # 3. flatMap with products popularity
     # 4. reduceByKey
-    productPopularity2 = productCustomer.map(lambda item: (rand.randint(0, k - 1), item))
-    productPopularity2 = productPopularity2.groupByKey()
-    productPopularity2 = productPopularity2.flatMap(count_popularity)
-    productPopularity2 = productPopularity2.reduceByKey(lambda x, y: x + y)
+    productPopularity2 = productCustomer\
+        .map(lambda item: (rand.randint(0, k - 1), item))\
+        .groupByKey()\
+        .flatMap(count_popularity)\
+        .reduceByKey(lambda x, y: x + y)
     print(f'productPopularity2:')
     print_output(productPopularity2.collect())
     print('\n')
