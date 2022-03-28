@@ -19,6 +19,7 @@ def check_input(args):
     assert os.path.isfile(data_path), 'Cannot access file, check directory'
 
 
+
 def filter_data(RDD, country):
     # TODO: filtering Rovena
     filtered = RDD.filter(
@@ -52,7 +53,7 @@ def print_output(popularity_items):
 
 
 def print_ordered_pairs(items_list):
-    for item in sorted(items_list, key=lambda item: int(item[0])):
+    for item in sorted(items_list):
         print(item)
 
 
@@ -64,24 +65,21 @@ def print_top(productRDD, top_n):
 def do_partition(client_log, n_partitions):
     return (rand.randint(0, n_partitions - 1), client_log)
 
-def gather_unique_pairs(pairs, country):
+def gather_unique_pairs(pairs):
     prod_customer_dict = {}
 
     rand_key, client_logs = pairs[0], pairs[1]
 
-    for log in client_logs:
+    for features in client_logs:
 
-        features = log.split(',')
-        quantity = features[3]
-        if (int(quantity) > 0) and (country == 'all' or country == features[-1]):  # quantity
-            product = features[1]
-            customer = features[6]
+        product = features[1]
+        customer = features[6]
 
-            if product in prod_customer_dict.keys():
-               if not (customer in prod_customer_dict[product]):
-                   prod_customer_dict[product].append(customer)
-            else:
-               prod_customer_dict[product] = [customer]
+        if product in prod_customer_dict.keys():
+           if not (customer in prod_customer_dict[product]):
+               prod_customer_dict[product].append(customer)
+        else:
+           prod_customer_dict[product] = [customer]
 
     res = []
     for productID, customers in prod_customer_dict.items():
@@ -128,29 +126,34 @@ def main(argv):
 
     # 2. productCustomer
     # Logic:
+    # 0. Filter data to keep space safe + split strings into feature vectors
     # 1. Random partitioning into K groups
-    # 2. Within each group, split item and do filtering before looking for distinct pairs
-    # 3. Within each group, look for distinct product - customer pairs --> return them
-    # 4. We dont need reduce by key here
+    # 2. Within each group, look for distinct product - customer pairs --> return them
+    # 3. We dont need reduce by key here
 
     # TODO: map() Rovena
+    # productCustomer = rawData.map(lambda item :(item[-2],item[1])).groupBy(lambda item:(item[1],item[-2]))
+    rawData = rawData.map(lambda item: item.split(','))
+    rawData = filter_data(rawData, s)
+
     productCustomer = rawData\
         .map(lambda client_log: do_partition(client_log, k))\
         .groupByKey()\
-        .flatMap(lambda group: gather_unique_pairs(group, s))
+        .flatMap(lambda group: gather_unique_pairs(group))
+        # TODO: maybe another iteration is needed
     print(f'Product-Customer Pairs = {productCustomer.count()}')
 
     # 3. Product popularity:
     # 1. MapPartitions: calc number of unique customers, buying the product, group by
     # key and calc sum
     productPopularity1 = productCustomer\
-        .mapPartitions(lambda x: x)\
+        .mapPartitions(lambda pairs: calc_popularity(pairs))\
         .groupByKey()\
-        .mapValues(lambda l: len(l))
+        .mapValues(lambda n_customers: sum(n_customers))
 
-        # .mapPartitions(lambda pairs: calc_popularity(pairs))\
+        # .mapPartitions(lambda x: x)\
         # .groupByKey()\
-        # .mapValues(lambda n_customers: sum(n_customers))
+        # .mapValues(lambda l: len(l))
 
     print(f'productPopularity1:')
     print_output(productPopularity1.collect())
