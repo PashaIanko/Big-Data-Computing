@@ -20,6 +20,7 @@ def check_input(args):
 
 
 def filter_data(RDD, country):
+    # TODO: filtering Rovena
     filtered = RDD.filter(
         lambda item: int(item[3]) > 0
     )
@@ -131,6 +132,8 @@ def main(argv):
     # 2. Within each group, split item and do filtering before looking for distinct pairs
     # 3. Within each group, look for distinct product - customer pairs --> return them
     # 4. We dont need reduce by key here
+
+    # TODO: map() Rovena
     productCustomer = rawData\
         .map(lambda client_log: do_partition(client_log, k))\
         .groupByKey()\
@@ -141,9 +144,13 @@ def main(argv):
     # 1. MapPartitions: calc number of unique customers, buying the product, group by
     # key and calc sum
     productPopularity1 = productCustomer\
-        .mapPartitions(lambda pairs: calc_popularity(pairs))\
+        .mapPartitions(lambda x: x)\
         .groupByKey()\
-        .mapValues(lambda n_customers: sum(n_customers))
+        .mapValues(lambda l: len(l))
+
+        # .mapPartitions(lambda pairs: calc_popularity(pairs))\
+        # .groupByKey()\
+        # .mapValues(lambda n_customers: sum(n_customers))
 
     print(f'productPopularity1:')
     print_output(productPopularity1.collect())
