@@ -47,8 +47,7 @@ def gather_unique_customers(pairs):
 
 
 def print_output(popularity_items):
-    sort = sorted(popularity_items, key=lambda x: int(x[0]))
-    for item in sort:
+    for item in sorted(popularity_items):
         print(f'Product: {item[0]}, popularity: {item[1]}')
 
 
@@ -59,8 +58,10 @@ def print_ordered_pairs(items_list):
 
 def print_top(productRDD, top_n):
     top_list = productRDD.top(top_n, key=lambda x: x[1])
-    for item in top_list:
-        print(f'Product ID: {item[0]}, Popularity: {item[1]}')
+    output_lines = []
+    for item in sorted(top_list):
+        output_lines.append(f'Product {item[0]} Popularity {item[1]};')
+    print(''.join(output_lines))
 
 def do_partition(client_log, n_partitions):
     return (rand.randint(0, n_partitions - 1), client_log)
@@ -84,7 +85,8 @@ def gather_unique_pairs(pairs):
     res = []
     for productID, customers in prod_customer_dict.items():
         for customer in customers:
-            res.append((productID, customer))
+            res.append(((productID, customer), 1))
+            # res.append((f'{productID}-{customer}', 1))
     return res
 
 def calc_popularity(pairs):
@@ -136,12 +138,20 @@ def main(argv):
     rawData = rawData.map(lambda item: item.split(','))
     rawData = filter_data(rawData, s)
 
-    productCustomer = rawData\
-        .map(lambda client_log: do_partition(client_log, k))\
-        .groupByKey()\
-        .flatMap(lambda group: gather_unique_pairs(group))
-        # TODO: maybe another iteration is needed
+    # productCustomer = rawData\
+    #     .map(lambda client_log: do_partition(client_log, k))\
+    #     .groupByKey()\
+    #     .flatMap(lambda group: gather_unique_pairs(group))
+    # print(f'Product-Customer Pairs = {productCustomer.count()}')
+
+    productCustomer = rawData.map(lambda client_log: do_partition(client_log, k))
+    productCustomer = productCustomer.groupByKey()
+    productCustomer = productCustomer.flatMap(lambda item: gather_unique_pairs(item))
+    productCustomer = productCustomer.reduceByKey(lambda x, y: x + y)  # remove duplicate (product-customer pairs)
+    productCustomer = productCustomer.map(lambda item: (item[0][0], item[0][1]))
+
     print(f'Product-Customer Pairs = {productCustomer.count()}')
+
 
     # 3. Product popularity:
     # 1. MapPartitions: calc number of unique customers, buying the product, group by
@@ -155,9 +165,9 @@ def main(argv):
         # .groupByKey()\
         # .mapValues(lambda l: len(l))
 
-    print(f'productPopularity1:')
-    print_output(productPopularity1.collect())
-    print('\n')
+    # print(f'productPopularity1:')
+    # print_output(productPopularity1.collect())
+    # print('\n')
 
     # 4. Product popularity with map / mapToPair / reduceByKey methods
     # Logic:
@@ -170,13 +180,14 @@ def main(argv):
         .groupByKey()\
         .flatMap(count_popularity)\
         .reduceByKey(lambda x, y: x + y)
-    print(f'productPopularity2:')
-    print_output(productPopularity2.collect())
-    print('\n')
+
+    # print(f'productPopularity2:')
+    # print_output(productPopularity2.collect())
+    # print('\n')
 
     # 5. Extract top h values
     if h > 0:
-        print(f'Top {h} popular products:\n')
+        print(f'Top {h} Products and their Popularities\n')
         print_top(productPopularity1, h)
 
     # 6. If h == 0
@@ -192,7 +203,15 @@ if __name__ == "__main__":
     os.environ['pyspark_driver_python'] = sys.executable
 
     # K, h, s, data_path
-    argv = ['4', '2', 'Italy', './sample_50.csv']
+
+    # Test 1
+    # argv = ['4', '2', 'Italy', './sample_50.csv']
+
+    # Test 2
+    argv = ['4', '5', 'all', './sample_10000.csv']
+
+    # Test 3
+    # argv = ['4', '5', 'United_Kingdom', './full_dataset.csv']
 
     main(argv)
     # main(sys.argv)
