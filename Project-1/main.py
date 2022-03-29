@@ -47,8 +47,7 @@ def gather_unique_customers(pairs):
 
 
 def print_output(popularity_items):
-    sort = sorted(popularity_items, key=lambda x: int(x[0]))
-    for item in sort:
+    for item in sorted(popularity_items):
         print(f'Product: {item[0]}, popularity: {item[1]}')
 
 
@@ -164,9 +163,9 @@ def main(argv):
         # .groupByKey()\
         # .mapValues(lambda l: len(l))
 
-    print(f'productPopularity1:')
-    print_output(productPopularity1.collect())
-    print('\n')
+    # print(f'productPopularity1:')
+    # print_output(productPopularity1.collect())
+    # print('\n')
 
     # 4. Product popularity with map / mapToPair / reduceByKey methods
     # Logic:
@@ -179,9 +178,10 @@ def main(argv):
         .groupByKey()\
         .flatMap(count_popularity)\
         .reduceByKey(lambda x, y: x + y)
-    print(f'productPopularity2:')
-    print_output(productPopularity2.collect())
-    print('\n')
+
+    # print(f'productPopularity2:')
+    # print_output(productPopularity2.collect())
+    # print('\n')
 
     # 5. Extract top h values
     if h > 0:
