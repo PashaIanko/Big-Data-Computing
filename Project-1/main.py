@@ -58,8 +58,10 @@ def print_ordered_pairs(items_list):
 
 def print_top(productRDD, top_n):
     top_list = productRDD.top(top_n, key=lambda x: x[1])
-    for item in top_list:
-        print(f'Product ID: {item[0]}, Popularity: {item[1]}')
+    output_lines = []
+    for item in sorted(top_list):
+        output_lines.append(f'Product {item[0]} Popularity {item[1]};')
+    print(''.join(output_lines))
 
 def do_partition(client_log, n_partitions):
     return (rand.randint(0, n_partitions - 1), client_log)
@@ -185,7 +187,7 @@ def main(argv):
 
     # 5. Extract top h values
     if h > 0:
-        print(f'Top {h} popular products:\n')
+        print(f'Top {h} Products and their Popularities\n')
         print_top(productPopularity1, h)
 
     # 6. If h == 0
@@ -207,6 +209,9 @@ if __name__ == "__main__":
 
     # Test 2
     argv = ['4', '5', 'all', './sample_10000.csv']
+
+    # Test 3
+    # argv = ['4', '5', 'United_Kingdom', './full_dataset.csv']
 
     main(argv)
     # main(sys.argv)
