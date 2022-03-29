@@ -84,7 +84,8 @@ def gather_unique_pairs(pairs):
     res = []
     for productID, customers in prod_customer_dict.items():
         for customer in customers:
-            res.append((productID, customer))
+            res.append(((productID, customer), 1))
+            # res.append((f'{productID}-{customer}', 1))
     return res
 
 def calc_popularity(pairs):
@@ -136,12 +137,20 @@ def main(argv):
     rawData = rawData.map(lambda item: item.split(','))
     rawData = filter_data(rawData, s)
 
-    productCustomer = rawData\
-        .map(lambda client_log: do_partition(client_log, k))\
-        .groupByKey()\
-        .flatMap(lambda group: gather_unique_pairs(group))
-        # TODO: maybe another iteration is needed
+    # productCustomer = rawData\
+    #     .map(lambda client_log: do_partition(client_log, k))\
+    #     .groupByKey()\
+    #     .flatMap(lambda group: gather_unique_pairs(group))
+    # print(f'Product-Customer Pairs = {productCustomer.count()}')
+
+    productCustomer = rawData.map(lambda client_log: do_partition(client_log, k))
+    productCustomer = productCustomer.groupByKey()
+    productCustomer = productCustomer.flatMap(lambda item: gather_unique_pairs(item))
+    productCustomer = productCustomer.reduceByKey(lambda x, y: x + y)  # remove duplicate (product-customer pairs)
+    productCustomer = productCustomer.map(lambda item: (item[0][0], item[0][1]))
+
     print(f'Product-Customer Pairs = {productCustomer.count()}')
+
 
     # 3. Product popularity:
     # 1. MapPartitions: calc number of unique customers, buying the product, group by
@@ -192,7 +201,12 @@ if __name__ == "__main__":
     os.environ['pyspark_driver_python'] = sys.executable
 
     # K, h, s, data_path
-    argv = ['4', '2', 'Italy', './sample_50.csv']
+
+    # Test 1
+    # argv = ['4', '2', 'Italy', './sample_50.csv']
+
+    # Test 2
+    argv = ['4', '5', 'all', './sample_10000.csv']
 
     main(argv)
     # main(sys.argv)
