@@ -117,7 +117,7 @@ def calc_popularity_newversion(pairs):
     popularity = []
     for pair0, pair1 in pairs:
         popularity.append((pair0,1))
-
+    return popularity
 
 def main(argv):
     # check correctness
