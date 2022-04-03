@@ -7,7 +7,7 @@ import random as rand
 
 
 def check_input(argv):
-    assert len(argv) == 5, 'Incorrect № parameters'
+    # assert len(argv) == 5, 'Incorrect № parameters'
 
     k = argv[1]
     h = argv[2]
@@ -16,7 +16,6 @@ def check_input(argv):
 
     assert k.isdigit(), 'Incorrect K (expect number)'
     assert h.isdigit(), 'Incorrect H (expect number)'
-    print(data_path)
     assert os.path.isfile(data_path), 'Cannot access file, check directory'
 
 
@@ -52,16 +51,16 @@ def print_output(popularity_items):
 
 def print_ordered_pairs(RDD):
     output_lines = []
-    for item in RDD:
-        output_lines.append(f'Product {item[0]} Popularity {item[1]};')
-    print(''.join(sorted(output_lines, key= lambda x: x[0])))
+    for item in sorted(RDD):
+        output_lines.append(f'Product {item[0]} Popularity {item[1]}; ')
+    print(''.join(output_lines))
 
 
 def print_top(productRDD, top_n):
     top_list = productRDD.top(top_n, key=lambda x: x[1])
     output_lines = []
     for item in top_list:
-        output_lines.append(f'Product {item[0]} Popularity {item[1]};')
+        output_lines.append(f'Product {item[0]} Popularity {item[1]}; ')
     print(''.join(sorted(output_lines, key= lambda x: x[1])))
 
 def do_partition(client_log, n_partitions):
@@ -121,7 +120,7 @@ def calc_popularity_newversion(pairs):
 
 def main(argv):
     # check correctness
-    # check_input(argv)
+    check_input(argv)
     k = int(argv[1])
     h = int(argv[2])
     s = argv[3]
@@ -143,10 +142,6 @@ def main(argv):
     # 1. Random partitioning into K groups
     # 2. Within each group, look for distinct product - customer pairs --> return them
     # 3. We dont need reduce by key here
-
-    # TODO: map() Rovena
-
-
     rawData = rawData.map(lambda item: item.split(','))
     rawData = filter_data(rawData, s)
 
@@ -183,22 +178,22 @@ def main(argv):
     # 2. Group by random key
     # 3. flatMap with products popularity
     # 4. reduceByKey
-    productPopularity2 = productCustomer1.map(lambda x: (x[0],1)).reduceByKey(lambda a,b: a+b)
+    productPopularity2 = productCustomer1.map(lambda x: (x[0], 1)).reduceByKey(lambda a, b: a + b)
 
-# print(f'productPopularity2:')
-# print_output(productPopularity2.collect())
-# print('\n')
+    # print(f'productPopularity2:')
+    # print_output(productPopularity2.collect())
+    # print('\n')
 
 # 5. Extract top h values
     if h > 0:
-        print(f'Top {h} Products and their Popularities\n')
+        print(f'Top {h} Products and their Popularities')
         print_top(productPopularity1, h)
 
 # 6. If h == 0
     if h == 0:
-        print(f'Ordered pairs for popularity 1:\n')
+        print('productPopularity1:')
         print_ordered_pairs(productPopularity1.collect())
-        print(f'Ordered pairs for popularity 2:\n')
+        print('productPopularity2:')
         print_ordered_pairs(productPopularity2.collect())
 
 
@@ -209,14 +204,13 @@ if __name__ == "__main__":
     # K, h, s, data_path
 
     # Test 1
-    # argv = ['4', '2', 'Italy', './sample_50.csv']
+    # argv = ['', '4', '0', 'Italy', './sample_50.csv']
 
     # Test 2
-    # margv = ['4', '5', 'all', './sample_10000.csv']
+    # argv = ['', '4', '5', 'all', './sample_10000.csv']
 
     # Test 3
-    # argv = ['4', '5', 'United_Kingdom', './full_dataset.csv']
+    # argv = ['', '4', '5', 'United_Kingdom', './full_dataset.csv']
 
     # main(argv)
-    print(f'Sys argv', sys.argv)
     main(sys.argv)
