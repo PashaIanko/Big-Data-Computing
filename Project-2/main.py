@@ -5,6 +5,7 @@ from os.path import isfile
 
 from numpy import min
 from numpy import copy
+from numpy import arange
 from numpy import sum
 
 from math import sqrt
@@ -17,12 +18,12 @@ def readVectorsSeq(filename):
     return result
 
 
-def euclidean(point1, point2):
-    res = 0
-    for i in range(len(point1)):
-        diff = (point1[i] - point2[i])
-        res += diff * diff
-    return sqrt(res)
+# def euclidean(point1, point2):
+#     res = 0
+#     for i in range(len(point1)):
+#         diff = (point1[i] - point2[i])
+#         res += diff * diff
+#     return sqrt(res)
 
 def calc_ball_weight(pointset, weights, idx, radius, distance_matrix):
     # Optimized list comprehension
@@ -36,7 +37,8 @@ def calc_ball_weight(pointset, weights, idx, radius, distance_matrix):
     # return sum_weight
 
 
-
+def get_ball_indices(pointset, distance_matrix, x_idx, radius):
+    return [i for i in range(len(pointset)) if distance_matrix[x_idx][i] <= radius]
 
 
 def SeqWeightedOutliers(P, W, k, z, alpha):
@@ -51,30 +53,42 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
     r = min(distances[distances != 0][: k + z + 1])
 
     while True:
-        Z = copy(P)
-        S = LifoQueue() # []  # classes
+        Z_idxs = [i for i in range(len(P))]  # arange(len(P))
+        S_idxs = []
         Wz = sum(W)
-        while (len(S) < k) and (Wz > 0):
+        while (len(S_idxs) < k) and (Wz > 0):
             max = 0
-            newcenter = None
-            for i, x in enumerate(P):
-                ball_weight = calc_ball_weight(
-                    pointset=Z,
-                    weights=W,
-                    idx=i,
-                    radius=(1 + 2 * alpha) * r,
-                    distance_matrix = distances
+            # newcenter = None
+            for i, _ in enumerate(P):
+                Bz_idxs = get_ball_indices(
+                    pointset=P[Z_idxs],
+                    distance_matrix=distances,
+                    x_idx=i,
+                    radius=(1 + 2 * alpha) * r
                 )
+                ball_weight = sum(W[Bz_idxs])
+
+
                 if ball_weight > max:
                     max = ball_weight
-                    newcenter = x
-            S.put(newcenter)
+                    newcenter_idx = i
 
+            S_idxs.append(newcenter_idx)
 
+            Bz_ = get_ball_indices(
+                pointset=P[Z_idxs],
+                distance_matrix=distances,
+                x_idx=newcenter_idx,
+                radius=(3 + 4 * alpha) * r
+            )
+            for idx in Bz_:
+                Z_idxs.remove(idx)
+                Wz -= W[idx]
+        if Wz <= z:
+            return P[S_idxs]
+        else:
+            r *= 2
 
-
-
-        del Z
 
 
 
