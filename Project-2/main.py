@@ -8,6 +8,7 @@ from numpy import copy
 from numpy import sum
 
 from math import sqrt
+from queue import LifoQueue
 
 
 def readVectorsSeq(filename):
@@ -51,19 +52,27 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
 
     while True:
         Z = copy(P)
-        S = []  # classes
+        S = LifoQueue() # []  # classes
         Wz = sum(W)
         while (len(S) < k) and (Wz > 0):
             max = 0
+            newcenter = None
             for i, x in enumerate(P):
                 ball_weight = calc_ball_weight(
-                    pointset=P,
+                    pointset=Z,
                     weights=W,
                     idx=i,
                     radius=(1 + 2 * alpha) * r,
                     distance_matrix = distances
                 )
-            pass
+                if ball_weight > max:
+                    max = ball_weight
+                    newcenter = x
+            S.put(newcenter)
+
+
+
+
 
         del Z
 
