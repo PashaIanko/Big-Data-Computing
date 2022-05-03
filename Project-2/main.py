@@ -7,6 +7,7 @@ from numpy import min
 from numpy import copy
 from numpy import arange
 from numpy import sum
+from numpy import array
 
 from math import sqrt
 from queue import LifoQueue
@@ -38,7 +39,7 @@ def calc_ball_weight(pointset, weights, idx, radius, distance_matrix):
 
 
 def get_ball_indices(pointset, distance_matrix, x_idx, radius):
-    return [i for i in range(len(pointset)) if distance_matrix[x_idx][i] <= radius]
+    return [i for i in range(len(pointset)) if (distance_matrix[x_idx][i] <= radius) and (i != x_idx)]
 
 
 def SeqWeightedOutliers(P, W, k, z, alpha):
@@ -50,7 +51,7 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
     # alpha - euristics coefficient
 
     distances = pairwise_distances(P)
-    r = min(distances[distances != 0][: k + z + 1])
+    r = min(distances[distances != 0][: k + z + 1]) / 2
 
     while True:
         Z_idxs = [i for i in range(len(P))]  # arange(len(P))
@@ -67,6 +68,7 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
                     radius=(1 + 2 * alpha) * r
                 )
                 ball_weight = sum(W[Bz_idxs])
+                print(f'w: {ball_weight} idxs: {Bz_idxs}')
 
 
                 if ball_weight > max:
@@ -98,17 +100,17 @@ def ComputeObjective(P, S, z):
 
 def main(argv):
     file_path = argv[1]
-    k = argv[2]
-    z = argv[3]
+    k = int(argv[2])
+    z = int(argv[3])
 
     # Read points
     assert(isfile(file_path))
-    inputPoints = readVectorsSeq(file_path)
+    inputPoints = array(readVectorsSeq(file_path))
 
     # print(inputPoints)
 
     # Create weights
-    weights = [1 for _ in range(len(inputPoints))]
+    weights = array([1 for _ in range(len(inputPoints))])
     # print(weights)
 
     # Run SeqWeightedOutliers(inputPoints, weights, k, z, 0)
@@ -124,9 +126,9 @@ if __name__ == '__main__':
 
     # main(sys.argv)
     path = './testdataHW2.txt'
-    k = 3
-    z = 3
-    args = [' ', path, chr(k), chr(z)]
+    k = '3'
+    z = '3'
+    args = [' ', path, k, z]
     main(args)
 
 
