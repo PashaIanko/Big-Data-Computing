@@ -127,8 +127,7 @@ def ComputeObjective(P, S, z):
     # return largest among remaining
     dists = []
     for x in P:
-        for center in S:
-            dists.append(euclidean(x, center))
+        dists.append(min([euclidean(x, center) for center in S]))
     dists.sort(reverse=True)
     return max(dists[z:])
 
@@ -141,15 +140,10 @@ def main(argv):
 
     # Read points
     assert(isfile(file_path))
+
     inputPoints = array(readVectorsSeq(file_path))
-
     weights = array([1 for _ in range(len(inputPoints))])
-
-    # Run SeqWeightedOutliers(inputPoints, weights, k, z, 0)
-    # compute a set of at most k centers
     solution = SeqWeightedOutliers(inputPoints, weights, k, z, alpha=0)
-    objective = ComputeObjective(inputPoints, solution, z)
-    print(f'Solution: {solution}')
 
 
 
@@ -158,7 +152,7 @@ if __name__ == '__main__':
     # main(sys.argv)
     path = './testdataHW2.txt'
     k = '3'
-    z = '10'  # '3' # '1' # '3'
+    z = '0'
     args = [' ', path, k, z]
     main(args)
 
