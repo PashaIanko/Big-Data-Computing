@@ -148,16 +148,16 @@ def main(argv):
 
 def test():
     # args - PATH, K, Z
-    # main([' ', './testdataHW2.txt', '3', '3'])
+    main([' ', './testdataHW2.txt', '3', '3'])
     print()
 
-    # main([' ', './testdataHW2.txt', '3', '1'])
+    main([' ', './testdataHW2.txt', '3', '1'])
     print()
 
-    # main([' ', './testdataHW2.txt', '3', '0'])
+    main([' ', './testdataHW2.txt', '3', '0'])
     print()
 
-    main([' ', './artificial9000.txt', '9', '300'])
+    # main([' ', './artificial9000.txt', '9', '300'])
 
 if __name__ == '__main__':
     test()
