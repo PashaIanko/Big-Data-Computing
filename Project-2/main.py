@@ -29,14 +29,14 @@ def euclidean(point1, point2):
 
 def calc_ball_weight(indices, weights, idx, radius, distance_matrix):
     # Optimized list comprehension
-    return sum([weights[i] for i in indices if (i != idx) and (distance_matrix[idx][i] <= radius)])
+    # return sum([weights[i] for i in indices if (i != idx) and (distance_matrix[idx][i] <= radius)])
 
     # More understandable code
     sum_weight = 0
-    # for i, point in enumerate(pointset):
-    #     if (i != idx) and (distance_matrix[idx][i] <= radius):
-    #         sum_weight += weights[i]
-    # return sum_weight
+    for i in indices:
+        if (i != idx) and (distance_matrix[idx][i] <= radius):
+            sum_weight += weights[i]
+    return sum_weight
 
 
 def get_ball_indices(idxs, distance_matrix, x_idx, radius):
@@ -47,18 +47,19 @@ def get_ball_indices(idxs, distance_matrix, x_idx, radius):
             res.append(i)
     return res
 
-def find_new_center(pointset, Z_idxs, weights, radius, distances):
+def find_new_center(pointset, Z_idxs, weights, radius, distances, center_indices):
     max_weight = 0
     new_center_idx = None
     for i in range(len(pointset)):
-        ball_weight = calc_ball_weight(
-                      Z_idxs, weights, i, radius, distances
-        )
-        ball_weight += weights[i]  # Account for the weight of x
+        if not (i in center_indices):
+            ball_weight = calc_ball_weight(
+                          Z_idxs, weights, i, radius, distances
+            )
+            ball_weight += weights[i]  # Account for the weight of x
 
-        if ball_weight > max_weight:
-            max_weight = ball_weight
-            new_center_idx = i
+            if ball_weight > max_weight:
+                max_weight = ball_weight
+                new_center_idx = i
     print(f'Max weight: {max_weight}')
     return new_center_idx
 
@@ -70,6 +71,8 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
     subset = P[: k + z + 1]
     r_dist = pairwise_distances(subset)
     r = np.min(r_dist[r_dist != 0]) / 2
+
+    print(f'Initial guess r = {r}')
 
     while(True):
         Z_idxs = [i for i in range(len(P))]
@@ -83,22 +86,27 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
                 Z_idxs=Z_idxs,
                 weights=W,
                 radius=(1 + 2 * alpha) * r,
-                distances=distances
+                distances=distances,
+                center_indices=S_idxs # we search for all x from P, but if x is not in already chosen set of centers
             )
             print(f'New center index: {new_center_idx}')
             assert(not (new_center_idx is None))
             assert(not (new_center_idx in S_idxs))
 
+
             S_idxs.append(new_center_idx)
 
             # Bz(newcenter, (3 + 4alpha)r)
             Bz = get_ball_indices(Z_idxs, distances, new_center_idx, (3 + 4 * alpha) * r)
+            print(f'Ball indices: {Bz}, Z indices: {Z_idxs}')
 
-            for idx in Bz + [new_center_idx]:
+            for idx in Bz: # + [new_center_idx]:
+                print(idx)
                 Z_idxs.remove(idx)
                 Wz -= W[idx]
 
         if (Wz <= z):
+            print(f'final r = {r}')
             return P[S_idxs]
         else:
             r *= 2
