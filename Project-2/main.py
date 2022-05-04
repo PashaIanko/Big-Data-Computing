@@ -9,6 +9,7 @@ from numpy import arange
 import numpy as np
 from numpy import sum
 from numpy import array
+from timeit import default_timer
 
 from math import sqrt
 from queue import LifoQueue
@@ -71,7 +72,7 @@ def find_ball_indices(idx, idxs, distance_matrix, radius):
 
 
 def SeqWeightedOutliers(P, W, k, z, alpha):
-
+    start = default_timer()
 
     # calc r_initial
     subset = P[: k + z + 1]
@@ -104,6 +105,8 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
                 Wz -= W[Bz_index]
 
         if Wz <= z:
+            end = default_timer()
+
             print(f'Input size n = {len(P)}')
             print(f'Number of centers k = {len(S_idxs)}')
             print(f'Number of outliers z = {len(Z_idxs)}')
@@ -111,6 +114,7 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
             print(f'Final guess = {r}')
             print(f'Number of guesses = {n_guesses}')
             print(f'Objective function = {ComputeObjective(P, P[S_idxs], len(Z_idxs))}')
+            print(f'Time of SeqWeightedOutliers = {(end - start) * 1000}')
 
             return P[S_idxs]
         else:
@@ -126,7 +130,7 @@ def ComputeObjective(P, S, z):
         for center in S:
             dists.append(euclidean(x, center))
     dists.sort(reverse=True)
-    return max(dists[z : ])
+    return max(dists[z:])
 
 
 
@@ -145,6 +149,7 @@ def main(argv):
     # compute a set of at most k centers
     solution = SeqWeightedOutliers(inputPoints, weights, k, z, alpha=0)
     objective = ComputeObjective(inputPoints, solution, z)
+    print(f'Solution: {solution}')
 
 
 
@@ -153,7 +158,7 @@ if __name__ == '__main__':
     # main(sys.argv)
     path = './testdataHW2.txt'
     k = '3'
-    z = '1' # '3'
+    z = '10'  # '3' # '1' # '3'
     args = [' ', path, k, z]
     main(args)
 
