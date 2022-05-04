@@ -27,17 +27,6 @@ def euclidean(point1, point2):
         res += diff * diff
     return sqrt(res)
 
-def calc_ball_weight(indices, weights, idx, radius, distance_matrix):
-    # Optimized list comprehension
-    # return sum([weights[i] for i in indices if (i != idx) and (distance_matrix[idx][i] <= radius)])
-
-    # More understandable code
-    sum_weight = 0
-    for i in indices:
-        if (i != idx) and (distance_matrix[idx][i] <= radius):
-            sum_weight += weights[i]
-    return sum_weight
-
 
 def get_ball_indices(idxs, distance_matrix, x_idx, radius):
     res = []
@@ -47,73 +36,86 @@ def get_ball_indices(idxs, distance_matrix, x_idx, radius):
             res.append(i)
     return res
 
-def find_new_center(pointset, Z_idxs, weights, radius, distances, center_indices):
+def calc_ball_weight(idx, z_idxs, weights, distance_matrix, radius):
+    weight = 0
+    for z_idx in z_idxs:
+        if distance_matrix[z_idx][idx] <= radius:
+            weight += weights[z_idx]
+    return weight
+
+
+def find_new_center_idx(P_idxs, Z_idxs, weights, distance_matrix, radius):
     max_weight = 0
     new_center_idx = None
-    for i in range(len(pointset)):
-        if not (i in center_indices):
-            ball_weight = calc_ball_weight(
-                          Z_idxs, weights, i, radius, distances
-            )
-            ball_weight += weights[i]  # Account for the weight of x
-
-            if ball_weight > max_weight:
-                max_weight = ball_weight
-                new_center_idx = i
-    print(f'Max weight: {max_weight}')
+    for i in P_idxs:
+        ball_weight = calc_ball_weight(
+            idx=i,
+            z_idxs=Z_idxs,
+            weights=weights,
+            distance_matrix=distance_matrix,
+            radius=radius
+        )
+        if ball_weight > max_weight:
+            max_weight = ball_weight
+            new_center_idx = i
     return new_center_idx
+
+
+def find_ball_indices(idx, idxs, distance_matrix, radius):
+    res = []
+    for z_idx in idxs:
+        if distance_matrix[idx][z_idx] <= radius:
+            res.append(z_idx)
+    return res
+
 
 
 def SeqWeightedOutliers(P, W, k, z, alpha):
 
-    distances = pairwise_distances(P)
 
+    # calc r_initial
     subset = P[: k + z + 1]
     r_dist = pairwise_distances(subset)
     r = np.min(r_dist[r_dist != 0]) / 2
+    r_initial = r
 
-    print(f'Initial guess r = {r}')
-
+    distances = pairwise_distances(P)
+    n_guesses = 1
     while(True):
+        P_idxs = [i for i in range(len(P))]
         Z_idxs = [i for i in range(len(P))]
         S_idxs = []
-        Wz = sum([w for w in W])
-
+        Wz = sum(W)
         while (len(S_idxs) < k) and (Wz > 0):
-            # finding x in P with max weight of the ball
-            new_center_idx = find_new_center(
-                pointset=P,
-                Z_idxs=Z_idxs,
-                weights=W,
-                radius=(1 + 2 * alpha) * r,
-                distances=distances,
-                center_indices=S_idxs # we search for all x from P, but if x is not in already chosen set of centers
-            )
-            print(f'New center index: {new_center_idx}')
+            new_center_idx = find_new_center_idx(P_idxs, Z_idxs, W, distances, radius=(1 + 2 * alpha) * r)
             assert(not (new_center_idx is None))
             assert(not (new_center_idx in S_idxs))
 
-
             S_idxs.append(new_center_idx)
 
-            # Bz(newcenter, (3 + 4alpha)r)
-            Bz = get_ball_indices(Z_idxs, distances, new_center_idx, (3 + 4 * alpha) * r)
-            print(f'Ball indices: {Bz}, Z indices: {Z_idxs}')
+            Bz_indices = find_ball_indices(
+                idx=new_center_idx,
+                idxs=Z_idxs,
+                distance_matrix=distances,
+                radius=(3 + 4 * alpha) * r
+            )
+            for Bz_index in Bz_indices:
+                Z_idxs.remove(Bz_index)
+                Wz -= W[Bz_index]
 
-            for idx in Bz: # + [new_center_idx]:
-                print(idx)
-                Z_idxs.remove(idx)
-                Wz -= W[idx]
+        if Wz <= z:
+            print(f'Input size n = {len(P)}')
+            print(f'Number of centers k = {len(S_idxs)}')
+            print(f'Number of outliers z = {len(Z_idxs)}')
+            print(f'Initial guess = {r_initial}')
+            print(f'Final guess = {r}')
+            print(f'Number of guesses = {n_guesses}')
+            print(f'Objective function = {ComputeObjective(P, P[S_idxs], len(Z_idxs))}')
 
-        if (Wz <= z):
-            print(f'final r = {r}')
             return P[S_idxs]
         else:
             r *= 2
-
-
-
-
+            n_guesses += 1
 
 
 def ComputeObjective(P, S, z):
@@ -123,9 +125,8 @@ def ComputeObjective(P, S, z):
     for x in P:
         for center in S:
             dists.append(euclidean(x, center))
-    dists.sort(reverse = True)
+    dists.sort(reverse=True)
     return max(dists[z : ])
-
 
 
 
@@ -138,21 +139,13 @@ def main(argv):
     assert(isfile(file_path))
     inputPoints = array(readVectorsSeq(file_path))
 
-    # print(inputPoints)
-
-    # Create weights
     weights = array([1 for _ in range(len(inputPoints))])
-    # print(weights)
 
     # Run SeqWeightedOutliers(inputPoints, weights, k, z, 0)
     # compute a set of at most k centers
-
-
-
-    solution = SeqWeightedOutliers(inputPoints, weights, k, z, 1)
-    print(solution)
+    solution = SeqWeightedOutliers(inputPoints, weights, k, z, alpha=0)
     objective = ComputeObjective(inputPoints, solution, z)
-    print(f'Objective function = {objective}')
+
 
 
 if __name__ == '__main__':
@@ -160,7 +153,7 @@ if __name__ == '__main__':
     # main(sys.argv)
     path = './testdataHW2.txt'
     k = '3'
-    z = '3'
+    z = '1' # '3'
     args = [' ', path, k, z]
     main(args)
 
