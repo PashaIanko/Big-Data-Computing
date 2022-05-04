@@ -58,10 +58,15 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
     # z - number of outlierz
     # alpha - euristics coefficient
 
+    print(f'Input size n = {len(P)}')
+    print(f'Number of centers k = {k}')
+    print(f'Number of outliers z = {z}')
+
     distances = pairwise_distances(P)
     r = min(distances[distances != 0][: k + z + 1]) / 2
-    print(f'Initial r: {r}')
+    print(f'Initial guess: {r}')
 
+    n_guesses = 1
     while True:
         Z_idxs = [i for i in range(len(P))]  # arange(len(P))
         S_idxs = []
@@ -71,7 +76,7 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
             max_weight = 0
             newcenter_idx = None
 
-            print(f'Iteration {iter}: Remain {len(Z_idxs)} in Z. Len P = {len(P)}')
+            # print(f'Iteration {iter}: Remain {len(Z_idxs)} in Z. Len P = {len(P)}')
             iter += 1
             for i, _ in enumerate(P):
 
@@ -81,14 +86,14 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
                     x_idx=i,
                     radius=(1 + 2 * alpha) * r
                 )
-                print(f'Found {len(Bz_idxs)} objects in Bz')
+                # print(f'Found {len(Bz_idxs)} objects in Bz')
                 ball_weight = sum(W[Bz_idxs]) + W[i]  # Weight of the ball center is also counted
-                print(f'Ball weight = {ball_weight}')
+                # print(f'Ball weight = {ball_weight}')
 
 
                 if ball_weight > max_weight and not (newcenter_idx in S_idxs):
                     max_weight = ball_weight
-                    print(f'Updated Now max = {max_weight}, ball weight = {ball_weight}')
+                    # print(f'Updated Now max = {max_weight}, ball weight = {ball_weight}')
                     newcenter_idx = i
 
 
@@ -103,14 +108,17 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
             )
 
             for idx in Bz_ + [newcenter_idx]: # After adding a center to C, we also remove the center from Z
-                print(f'Idx: {idx}')
+                # print(f'Idx: {idx}')
                 if idx in Z_idxs:
                     Z_idxs.remove(idx)
                 Wz -= W[idx]
         if Wz <= z:
+            print(f'Final guess = {r}')
+            print(f'Number of guesses = {n_guesses}')
             return P[S_idxs]
         else:
             r *= 2
+            n_guesses += 1
 
 
 
@@ -151,7 +159,7 @@ def main(argv):
     solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0)
     print(solution)
     objective = ComputeObjective(inputPoints, solution, z)
-    print(objective)
+    print(f'Objective function = {objective}')
 
 
 if __name__ == '__main__':
