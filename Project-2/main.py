@@ -6,6 +6,7 @@ from os.path import isfile
 from numpy import min
 from numpy import copy
 from numpy import arange
+import numpy as np
 from numpy import sum
 from numpy import array
 
@@ -26,9 +27,9 @@ def euclidean(point1, point2):
         res += diff * diff
     return sqrt(res)
 
-def calc_ball_weight(pointset, weights, idx, radius, distance_matrix):
+def calc_ball_weight(indices, weights, idx, radius, distance_matrix):
     # Optimized list comprehension
-    return sum([weights[i] for i in range(len(pointset)) if (i != idx) and (distance_matrix[idx][i] <= radius)])
+    return sum([weights[i] for i in indices if (i != idx) and (distance_matrix[idx][i] <= radius)])
 
     # More understandable code
     sum_weight = 0
@@ -46,79 +47,63 @@ def get_ball_indices(idxs, distance_matrix, x_idx, radius):
             res.append(i)
     return res
 
-    # return [i for i in idxs if distance_matrix[x_idx][i] <= radius and x_idx != i]
+def find_new_center(pointset, Z_idxs, weights, radius, distances):
+    max_weight = 0
+    new_center_idx = None
+    for i in range(len(pointset)):
+        ball_weight = calc_ball_weight(
+                      Z_idxs, weights, i, radius, distances
+        )
+        ball_weight += weights[i]  # Account for the weight of x
 
+        if ball_weight > max_weight:
+            max_weight = ball_weight
+            new_center_idx = i
+    print(f'Max weight: {max_weight}')
+    return new_center_idx
 
 
 def SeqWeightedOutliers(P, W, k, z, alpha):
-    # Weighted variant of kcenterOUT
-    # P - pointset
-    # W - weights
-    # k - number of centers
-    # z - number of outlierz
-    # alpha - euristics coefficient
-
-    print(f'Input size n = {len(P)}')
-    print(f'Number of centers k = {k}')
-    print(f'Number of outliers z = {z}')
 
     distances = pairwise_distances(P)
-    r = min(distances[distances != 0][: k + z + 1]) / 2
-    print(f'Initial guess: {r}')
 
-    n_guesses = 1
-    while True:
-        Z_idxs = [i for i in range(len(P))]  # arange(len(P))
+    subset = P[: k + z + 1]
+    r_dist = pairwise_distances(subset)
+    r = np.min(r_dist[r_dist != 0]) / 2
+
+    while(True):
+        Z_idxs = [i for i in range(len(P))]
         S_idxs = []
-        Wz = sum(W)
-        iter = 0
+        Wz = sum([w for w in W])
+
         while (len(S_idxs) < k) and (Wz > 0):
-            max_weight = 0
-            newcenter_idx = None
-
-            # print(f'Iteration {iter}: Remain {len(Z_idxs)} in Z. Len P = {len(P)}')
-            iter += 1
-            for i, _ in enumerate(P):
-
-                Bz_idxs = get_ball_indices(
-                    idxs=Z_idxs,  # allowed indexes - which points of P are still in Z
-                    distance_matrix=distances,
-                    x_idx=i,
-                    radius=(1 + 2 * alpha) * r
-                )
-                # print(f'Found {len(Bz_idxs)} objects in Bz')
-                ball_weight = sum(W[Bz_idxs]) + W[i]  # Weight of the ball center is also counted
-                # print(f'Ball weight = {ball_weight}')
-
-
-                if ball_weight > max_weight and not (newcenter_idx in S_idxs):
-                    max_weight = ball_weight
-                    # print(f'Updated Now max = {max_weight}, ball weight = {ball_weight}')
-                    newcenter_idx = i
-
-
-
-            S_idxs.append(newcenter_idx)
-
-            Bz_ = get_ball_indices(
-                idxs=Z_idxs,
-                distance_matrix=distances,
-                x_idx=newcenter_idx,
-                radius=(3 + 4 * alpha) * r
+            # finding x in P with max weight of the ball
+            new_center_idx = find_new_center(
+                pointset=P,
+                Z_idxs=Z_idxs,
+                weights=W,
+                radius=(1 + 2 * alpha) * r,
+                distances=distances
             )
+            print(f'New center index: {new_center_idx}')
+            assert(not (new_center_idx is None))
+            assert(not (new_center_idx in S_idxs))
 
-            for idx in Bz_ + [newcenter_idx]: # After adding a center to C, we also remove the center from Z
-                # print(f'Idx: {idx}')
-                if idx in Z_idxs:
-                    Z_idxs.remove(idx)
+            S_idxs.append(new_center_idx)
+
+            # Bz(newcenter, (3 + 4alpha)r)
+            Bz = get_ball_indices(Z_idxs, distances, new_center_idx, (3 + 4 * alpha) * r)
+
+            for idx in Bz + [new_center_idx]:
+                Z_idxs.remove(idx)
                 Wz -= W[idx]
-        if Wz <= z:
-            print(f'Final guess = {r}')
-            print(f'Number of guesses = {n_guesses}')
+
+        if (Wz <= z):
             return P[S_idxs]
         else:
             r *= 2
-            n_guesses += 1
+
+
 
 
 
