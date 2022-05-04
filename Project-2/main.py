@@ -146,14 +146,19 @@ def main(argv):
     solution = SeqWeightedOutliers(inputPoints, weights, k, z, alpha=0)
 
 
+def test():
+    main([' ', './testdataHW2.txt', '3', '3'])
+    print()
+
+    main([' ', './testdataHW2.txt', '3', '1'])
+    print()
+
+    main([' ', './testdataHW2.txt', '3', '0'])
+    print()
 
 if __name__ == '__main__':
-
+    test()
     # main(sys.argv)
-    path = './testdataHW2.txt'
-    k = '3'
-    z = '0'
-    args = [' ', path, k, z]
-    main(args)
+
 
 
