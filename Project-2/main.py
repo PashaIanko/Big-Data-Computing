@@ -149,7 +149,7 @@ def main(argv):
 
 
 
-    solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0)
+    solution = SeqWeightedOutliers(inputPoints, weights, k, z, 1)
     print(solution)
     objective = ComputeObjective(inputPoints, solution, z)
     print(f'Objective function = {objective}')
