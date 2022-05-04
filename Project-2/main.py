@@ -19,12 +19,12 @@ def readVectorsSeq(filename):
     return result
 
 
-# def euclidean(point1, point2):
-#     res = 0
-#     for i in range(len(point1)):
-#         diff = (point1[i] - point2[i])
-#         res += diff * diff
-#     return sqrt(res)
+def euclidean(point1, point2):
+    res = 0
+    for i in range(len(point1)):
+        diff = (point1[i] - point2[i])
+        res += diff * diff
+    return sqrt(res)
 
 def calc_ball_weight(pointset, weights, idx, radius, distance_matrix):
     # Optimized list comprehension
@@ -116,7 +116,16 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
 
 
 def ComputeObjective(P, S, z):
-    pass
+    # For each point x in P, compute all distances (x, S), sort, exclude z largest,
+    # return largest among remaining
+    dists = []
+    for x in P:
+        for center in S:
+            dists.append(euclidean(x, center))
+    dists.sort(reverse = True)
+    return max(dists[z : ])
+
+
 
 
 def main(argv):
@@ -142,6 +151,7 @@ def main(argv):
     solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0)
     print(solution)
     objective = ComputeObjective(inputPoints, solution, z)
+    print(objective)
 
 
 if __name__ == '__main__':
