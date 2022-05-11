@@ -30,44 +30,61 @@ def euclidean(point1, point2):
 
 
 def get_ball_indices(idxs, distance_matrix, x_idx, radius):
-    res = []
-    for i in idxs:
-        # print(f'Dist: {distance_matrix[x_idx][i]}, radius: {radius}')
-        if distance_matrix[x_idx][i] <= radius and x_idx != i:
-            res.append(i)
-    return res
+    return [i for i in idxs if distance_matrix[x_idx][i] <= radius and x_idx != i]
+    # res = []
+    # for i in idxs:
+    #     # print(f'Dist: {distance_matrix[x_idx][i]}, radius: {radius}')
+    #     if distance_matrix[x_idx][i] <= radius and x_idx != i:
+    #         res.append(i)
+    # return res
 
 def calc_ball_weight(idx, z_idxs, weights, distance_matrix, radius):
-    weight = 0
-    for z_idx in z_idxs:
-        if distance_matrix[z_idx][idx] <= radius:
-            weight += weights[z_idx]
-    return weight
+    return sum([weights[z_index] for z_index in z_idxs if distance_matrix[z_index][idx] <= radius])
+
+    # weight = 0
+    # for z_idx in z_idxs:
+    #     if distance_matrix[z_idx][idx] <= radius:
+    #         weight += weights[z_idx]
+    # return weight
 
 
 def find_new_center_idx(P_idxs, Z_idxs, weights, distance_matrix, radius):
-    max_weight = 0
-    new_center_idx = None
-    for i in P_idxs:
-        ball_weight = calc_ball_weight(
-            idx=i,
-            z_idxs=Z_idxs,
-            weights=weights,
-            distance_matrix=distance_matrix,
-            radius=radius
-        )
-        if ball_weight > max_weight:
-            max_weight = ball_weight
-            new_center_idx = i
-    return new_center_idx
+    ball_weights = [calc_ball_weight(idx=i, z_idxs=Z_idxs, weights=weights, distance_matrix=distance_matrix, radius=radius) for i in P_idxs]
+    # return index of maximum value
+    return P_idxs[ball_weights.index(max(ball_weights))]
+
+    # max_weight = 0
+    # new_center_idx = None
+    # for i in P_idxs:
+    #     ball_weight = calc_ball_weight(
+    #         idx=i,
+    #         z_idxs=Z_idxs,
+    #         weights=weights,
+    #         distance_matrix=distance_matrix,
+    #         radius=radius
+    #     )
+    #     if ball_weight > max_weight:
+    #         max_weight = ball_weight
+    #         new_center_idx = i
+    # return new_center_idx
 
 
 def find_ball_indices(idx, idxs, distance_matrix, radius):
-    res = []
-    for z_idx in idxs:
-        if distance_matrix[idx][z_idx] <= radius:
-            res.append(z_idx)
-    return res
+    return [z_idx for z_idx in idxs if distance_matrix[idx][z_idx] <= radius]
+    # res = []
+    # for z_idx in idxs:
+    #     if distance_matrix[idx][z_idx] <= radius:
+    #         res.append(z_idx)
+    # return res
+
+
+# def calc_n_outliers(pointset, center_idxs, distance_matrix, radius):
+#     res = 0
+#     for i in range(len(pointset)):
+#         if_larger = [distance_matrix[i][center_idx] >= radius for center_idx in center_idxs]
+#         if not(False in if_larger):
+#             res += 1
+#     return res
 
 
 def SeqWeightedOutliers(P, W, k, z, alpha):
@@ -114,7 +131,10 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
 
             print(f'Input size n = {len(P)}')
             print(f'Number of centers k = {len(S_idxs)}')
-            print(f'Number of outliers z = {len(Z_idxs)}')
+
+            # print(f'Number of outliers z = {len(Z_idxs)}')
+            print(f'Number of outliers z = {z}')
+
             print(f'Initial guess = {r_initial}')
             print(f'Final guess = {r}')
             print(f'Number of guesses = {n_guesses}')
@@ -130,11 +150,16 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
 def ComputeObjective(P, S, z):
     # For each point x in P, compute all distances (x, S), sort, exclude z largest,
     # return largest among remaining
-    dists = []
-    for x in P:
-        dists.append(min([euclidean(x, center) for center in S]))
+
+    dists = [min([euclidean(x, center) for center in S]) for x in P]
     dists.sort(reverse=True)
     return max(dists[z:])
+
+    # dists = []
+    # for x in P:
+    #     dists.append(min([euclidean(x, center) for center in S]))
+    # dists.sort(reverse=True)
+    # return max(dists[z:])
 
 
 
@@ -142,8 +167,6 @@ def main(argv):
     file_path = argv[1]
     k = int(argv[2])
     z = int(argv[3])
-
-    print(f'Read from main: k = {k}, z = {z}')
 
     # Read points
     assert(isfile(file_path))
@@ -155,16 +178,17 @@ def main(argv):
 
 def test():
     # args - PATH, K, Z
-    # main([' ', './testdataHW2.txt', '3', '3'])
-    # print()
-    #
-    # main([' ', './testdataHW2.txt', '3', '1'])
-    # print()
-    #
-    # main([' ', './testdataHW2.txt', '3', '0'])
-    # print()
+    main([' ', './testdataHW2.txt', '3', '3'])
+    print()
+
+    main([' ', './testdataHW2.txt', '3', '1'])
+    print()
+
+    main([' ', './testdataHW2.txt', '3', '0'])
+    print()
 
     # main([' ', './artificial9000.txt', '9', '300'])
+    # print()
 
     main([' ', './uber-small.csv', '10', '100'])
     print()
