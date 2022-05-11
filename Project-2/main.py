@@ -70,7 +70,6 @@ def find_ball_indices(idx, idxs, distance_matrix, radius):
     return res
 
 
-
 def SeqWeightedOutliers(P, W, k, z, alpha):
     start = default_timer()
 
@@ -88,7 +87,13 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
         S_idxs = []
         Wz = sum(W)
         while (len(S_idxs) < k) and (Wz > 0):
-            new_center_idx = find_new_center_idx(P_idxs, Z_idxs, W, distances, radius=(1 + 2 * alpha) * r)
+            new_center_idx = find_new_center_idx(
+                P_idxs,
+                Z_idxs,
+                W,
+                distances,
+                radius=(1 + 2 * alpha) * r
+            )
             assert(not (new_center_idx is None))
             assert(not (new_center_idx in S_idxs))
 
@@ -138,6 +143,8 @@ def main(argv):
     k = int(argv[2])
     z = int(argv[3])
 
+    print(f'Read from main: k = {k}, z = {z}')
+
     # Read points
     assert(isfile(file_path))
 
@@ -148,16 +155,22 @@ def main(argv):
 
 def test():
     # args - PATH, K, Z
-    main([' ', './testdataHW2.txt', '3', '3'])
-    print()
-
-    main([' ', './testdataHW2.txt', '3', '1'])
-    print()
-
-    main([' ', './testdataHW2.txt', '3', '0'])
-    print()
+    # main([' ', './testdataHW2.txt', '3', '3'])
+    # print()
+    #
+    # main([' ', './testdataHW2.txt', '3', '1'])
+    # print()
+    #
+    # main([' ', './testdataHW2.txt', '3', '0'])
+    # print()
 
     # main([' ', './artificial9000.txt', '9', '300'])
+
+    main([' ', './uber-small.csv', '10', '100'])
+    print()
+
+    main([' ', './uber-small.csv', '10', '0'])
+    print()
 
 if __name__ == '__main__':
     test()
