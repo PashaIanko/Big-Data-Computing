@@ -130,7 +130,9 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
             end = default_timer()
 
             print(f'Input size n = {len(P)}')
-            print(f'Number of centers k = {len(S_idxs)}')
+
+            print(f'Number of centers k = {k}')
+            # print(f'Number of centers k = {len(S_idxs)}')
 
             # print(f'Number of outliers z = {len(Z_idxs)}')
             print(f'Number of outliers z = {z}')
