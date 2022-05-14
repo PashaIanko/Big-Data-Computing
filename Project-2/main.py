@@ -44,10 +44,10 @@ def calc_ball_weight(idx, z_idxs, weights, distance_matrix, radius):
     # return weight
 
 
-def find_new_center_idx(P_idxs, Z_idxs, weights, distance_matrix, radius):
-    ball_weights = [calc_ball_weight(idx=i, z_idxs=Z_idxs, weights=weights, distance_matrix=distance_matrix, radius=radius) for i in P_idxs]
+def find_new_center_idx(input_size, Z_idxs, weights, distance_matrix, radius):
+    ball_weights = [calc_ball_weight(idx=i, z_idxs=Z_idxs, weights=weights, distance_matrix=distance_matrix, radius=radius) for i in range(input_size)]
     # return index of maximum value
-    return P_idxs[ball_weights.index(max(ball_weights))]
+    return ball_weights.index(max(ball_weights))
 
     # max_weight = 0
     # new_center_idx = None
@@ -85,19 +85,22 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
 
     distances = pairwise_distances(P)
     n_guesses = 1
+    input_size = len(P)
     while(True):
-        P_idxs = [i for i in range(len(P))]
+        # P_idxs = [i for i in range(len(P))]
+
         Z_idxs = [i for i in range(len(P))]
         S_idxs = []
         Wz = sum(W)
         while (len(S_idxs) < k) and (Wz > 0):
-            new_center_idx = find_new_center_idx(P_idxs, Z_idxs, W, distances, radius=(1 + 2 * alpha) * r)
+            new_center_idx = find_new_center_idx(input_size, Z_idxs, W, distances, radius=(1 + 2 * alpha) * r)
             # assert(not (new_center_idx is None))
             # assert(not (new_center_idx in S_idxs))
 
             S_idxs.append(new_center_idx)
 
             Bz_indices = find_ball_indices(idx=new_center_idx, idxs=Z_idxs, distance_matrix=distances, radius=(3 + 4 * alpha) * r)
+
             for Bz_index in Bz_indices:
                 Z_idxs.remove(Bz_index)
                 Wz -= W[Bz_index]
@@ -105,7 +108,7 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
         if Wz <= z:
             end = default_timer()
 
-            print(f'Input size n = {len(P)}')
+            print(f'Input size n = {input_size}')
             print(f'Number of centers k = {k}')
             print(f'Number of outliers z = {z}')
             print(f'Initial guess = {r_initial}')
