@@ -6,7 +6,7 @@ import numpy as np
 from numpy import sum
 from numpy import array
 from timeit import default_timer
-
+import sys
 from math import sqrt
 
 
@@ -173,8 +173,8 @@ def test():
     print()
 
 if __name__ == '__main__':
-    test()
-    # main(sys.argv)
+    # test()
+    main(sys.argv)
 
 
 
