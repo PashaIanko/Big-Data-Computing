@@ -1,18 +1,13 @@
-import time
-import sys
 from sklearn.metrics import pairwise_distances
 from os.path import isfile
 
 from numpy import min
-from numpy import copy
-from numpy import arange
 import numpy as np
 from numpy import sum
 from numpy import array
 from timeit import default_timer
 
 from math import sqrt
-from queue import LifoQueue
 
 
 def readVectorsSeq(filename):
@@ -22,11 +17,12 @@ def readVectorsSeq(filename):
 
 
 def euclidean(point1, point2):
-    res = 0
-    for i in range(len(point1)):
-        diff = (point1[i] - point2[i])
-        res += diff * diff
-    return sqrt(res)
+    return sqrt(sum([(point1[i] - point2[i]) * (point1[i] - point2[i]) for i in range(len(point1))]))
+    # res = 0
+    # for i in range(len(point1)):
+    #     diff = (point1[i] - point2[i])
+    #     res += diff * diff
+    # return sqrt(res)
 
 
 def get_ball_indices(idxs, distance_matrix, x_idx, radius):
@@ -78,15 +74,6 @@ def find_ball_indices(idx, idxs, distance_matrix, radius):
     # return res
 
 
-# def calc_n_outliers(pointset, center_idxs, distance_matrix, radius):
-#     res = 0
-#     for i in range(len(pointset)):
-#         if_larger = [distance_matrix[i][center_idx] >= radius for center_idx in center_idxs]
-#         if not(False in if_larger):
-#             res += 1
-#     return res
-
-
 def SeqWeightedOutliers(P, W, k, z, alpha):
     start = default_timer()
 
@@ -104,24 +91,13 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
         S_idxs = []
         Wz = sum(W)
         while (len(S_idxs) < k) and (Wz > 0):
-            new_center_idx = find_new_center_idx(
-                P_idxs,
-                Z_idxs,
-                W,
-                distances,
-                radius=(1 + 2 * alpha) * r
-            )
-            assert(not (new_center_idx is None))
-            assert(not (new_center_idx in S_idxs))
+            new_center_idx = find_new_center_idx(P_idxs, Z_idxs, W, distances, radius=(1 + 2 * alpha) * r)
+            # assert(not (new_center_idx is None))
+            # assert(not (new_center_idx in S_idxs))
 
             S_idxs.append(new_center_idx)
 
-            Bz_indices = find_ball_indices(
-                idx=new_center_idx,
-                idxs=Z_idxs,
-                distance_matrix=distances,
-                radius=(3 + 4 * alpha) * r
-            )
+            Bz_indices = find_ball_indices(idx=new_center_idx, idxs=Z_idxs, distance_matrix=distances, radius=(3 + 4 * alpha) * r)
             for Bz_index in Bz_indices:
                 Z_idxs.remove(Bz_index)
                 Wz -= W[Bz_index]
@@ -130,13 +106,8 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
             end = default_timer()
 
             print(f'Input size n = {len(P)}')
-
             print(f'Number of centers k = {k}')
-            # print(f'Number of centers k = {len(S_idxs)}')
-
-            # print(f'Number of outliers z = {len(Z_idxs)}')
             print(f'Number of outliers z = {z}')
-
             print(f'Initial guess = {r_initial}')
             print(f'Final guess = {r}')
             print(f'Number of guesses = {n_guesses}')
