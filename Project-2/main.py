@@ -17,7 +17,7 @@ def readVectorsSeq(filename):
 
 
 def euclidean(point1, point2):
-    return sqrt(sum([(point1[i] - point2[i]) * (point1[i] - point2[i]) for i in range(len(point1))]))
+    return np.linalg.norm(point1 - point2)
     # res = 0
     # for i in range(len(point1)):
     #     diff = (point1[i] - point2[i])
