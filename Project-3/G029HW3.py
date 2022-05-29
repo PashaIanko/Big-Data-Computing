@@ -1,6 +1,7 @@
 # Import Packages
 from pyspark import SparkConf, SparkContext
 import numpy as np
+from numpy import array
 import time
 import random
 import sys
@@ -80,8 +81,8 @@ def MR_kCenterOutliers(points, k, z, L):
     # ****** Return the final solution
 
     centers = SeqWeightedOutliers(
-        P=coresetPoints,
-        W=coresetWeights,
+        P=array(coresetPoints),
+        W=array(coresetWeights),
         k=k,
         z=z,
         alpha=2
@@ -233,7 +234,11 @@ def computeObjective(points, centers, z):
 #
 # ****** ADD THE CODE FOR SeqWeightedOuliers from HW2
 #
-    dists = [min([euclidean(x, center) for center in centers]) for x in points]
+    # Here we have to account, that InputPoints is
+    # a large pointset
+
+
+    dists = [min([euclidean(x, center) for center in centers]) for x in points.collect()]
     dists.sort(reverse=True)
     return max(dists[z:])
 
@@ -286,6 +291,7 @@ def main(argv):
     start = time.time()
     objective = computeObjective(inputPoints, solution, z)
     end = time.time()
+
     print("Objective function = ", objective)
     print("Time to compute objective function: ", str((end - start) * 1000), " ms")
 
