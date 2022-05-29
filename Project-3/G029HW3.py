@@ -5,8 +5,10 @@ import time
 import random
 import sys
 import math
-from timeit import default_timer
+# from timeit import default_timer
 from sklearn.metrics import pairwise_distances
+from os.path import isfile
+from os import environ
 
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -55,15 +57,15 @@ def MR_kCenterOutliers(points, k, z, L):
     
     #------------- ROUND 1 ---------------------------
     # Partition into L coresets
-    round_1_start = default_timer()
+    round_1_start = time.time()  # default_timer()
     coreset = points.mapPartitions(lambda iterator: extractCoreset(iterator, k+z+1))
-    round_1_end = default_timer()
+    round_1_end = time.time()  # default_timer()
     
     # END OF ROUND 1
 
     
     #------------- ROUND 2 ---------------------------
-    round_2_start = default_timer()
+    round_2_start = time.time()  # default_timer()
 
     elems = coreset.collect()
     coresetPoints = list()
@@ -85,7 +87,7 @@ def MR_kCenterOutliers(points, k, z, L):
         alpha=2
     )
 
-    round_2_end = default_timer()
+    round_2_end = time.time()  # default_timer()
 
     print(f'Time Round 1: {(round_1_end - round_1_start) * 1000} ms')
     print(f'Time Round 2: {(round_2_end - round_2_start) * 1000} ms')
@@ -242,15 +244,15 @@ def computeObjective(points, centers, z):
 # MAIN PROGRAM
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-def main():
+def main(argv):
     # Checking number of cmd line parameters
-    assert len(sys.argv) == 5, "Usage: python Homework3.py filepath k z L"
+    assert len(argv) == 5, "Usage: python Homework3.py filepath k z L"
 
     # Initialize variables
-    filename = sys.argv[1]
-    k = int(sys.argv[2])
-    z = int(sys.argv[3])
-    L = int(sys.argv[4])
+    filename = argv[1]
+    k = int(argv[2])
+    z = int(argv[3])
+    L = int(argv[4])
 
     start = 0
     end = 0
@@ -260,7 +262,10 @@ def main():
     sc = SparkContext(conf=conf)
     sc.setLogLevel("WARN")
 
+
+    assert isfile(filename), print('Cannot find file')
     # Read points from file
+
     start = time.time()
     inputPoints = sc.textFile(filename, L).map(lambda x: strToVector(x)).repartition(L).cache()
     N = inputPoints.count()
@@ -287,14 +292,16 @@ def main():
 def test():
     # Filepath, centers, outliers, partitions
 
-    main([' ', '/testdataHW3.txt', '3', '3', '1'])
+    main([' ', './testdataHW3.txt', '3', '3', '1'])
     print()
 
-    main([' ', '/testdataHW2.txt', '3', '1', '1'])
-    print()
+    # main([' ', '/testdataHW2.txt', '3', '1', '1'])
+    # print()
 
-    main([' ', '/testdataHW2.txt', '3', '0', '1'])
-    print()
+    # main([' ', '/testdataHW2.txt', '3', '0', '1'])
+    # print()
+
+
 
     # main([' ', './artificial9000.txt', '9', '300'])
     # print()
@@ -308,6 +315,9 @@ def test():
 
 # Just start the main program
 if __name__ == "__main__":
+    environ['pyspark_python'] = sys.executable
+    environ['pyspark_driver_python'] = sys.executable
+
     test()
     # main(sys.argv)
 
