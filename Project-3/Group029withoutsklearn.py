@@ -84,7 +84,7 @@ def MR_kCenterOutliers(points, k, z, L):
         W=array(coresetWeights),
         k=k,
         z=z,
-        alpha=0  # 2 [TODO: alpha was 2]
+        alpha=2
     )
 
     round_2_end = time.time()  # default_timer()
