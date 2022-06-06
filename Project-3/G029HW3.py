@@ -45,7 +45,7 @@ def euclidean(point1,point2):
     res = 0
     for i in range(len(point1)):
         diff = (point1[i]-point2[i])
-        res +=  diff*diff
+        res += diff*diff
     return math.sqrt(res)
 
 
@@ -230,17 +230,37 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 # Method computeObjective: computes objective function
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+def euclidean_partition(iterator: list, centers: np.array, z: int) -> list:
+    """ Calculate the euclidean distance using the saprk partition function object"""
+    distance_list = []
+    for point in iterator:
+        dists_to_center = [euclidean(point, c) for c in centers]
+        distance_list.append(min(dists_to_center))
+        # for center in centers:
+        #   distance_list.append(euclidean(point, center))
+
+    # Collect with z
+    distance_list.sort(reverse=True)
+    return distance_list[:z+1]
+
 def computeObjective(points, centers, z):
-#
-# ****** ADD THE CODE FOR SeqWeightedOuliers from HW2
-#
+    #
+    # ****** ADD THE CODE FOR SeqWeightedOuliers from HW2
+    #
     # Here we have to account, that InputPoints is
     # a large pointset
 
 
-    dists = [min([euclidean(x, center) for center in centers]) for x in points.collect()]
+    """ Test for computing the objective function with Map partitions """
+    distance_rdd = points.mapPartitions(lambda iterator: euclidean_partition(iterator, centers, z))
+    dists = distance_rdd.collect()
     dists.sort(reverse=True)
     return max(dists[z:])
+
+
+    # dists = [min([euclidean(x, center) for center in centers]) for x in points.collect()]
+    # dists.sort(reverse=True)
+    # return max(dists[z:])
 
 
 
