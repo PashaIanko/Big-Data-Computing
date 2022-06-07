@@ -6,10 +6,9 @@ import time
 import random
 import sys
 import math
-# from timeit import default_timer
-from sklearn.metrics import pairwise_distances
 from os.path import isfile
 from os import environ
+# from sklearn.metrics import pairwise_distances
 
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -45,7 +44,7 @@ def euclidean(point1,point2):
     res = 0
     for i in range(len(point1)):
         diff = (point1[i]-point2[i])
-        res += diff*diff
+        res +=  diff*diff
     return math.sqrt(res)
 
 
@@ -55,16 +54,16 @@ def euclidean(point1,point2):
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 def MR_kCenterOutliers(points, k, z, L):
 
-    
+
     #------------- ROUND 1 ---------------------------
     # Partition into L coresets
     round_1_start = time.time()  # default_timer()
     coreset = points.mapPartitions(lambda iterator: extractCoreset(iterator, k+z+1))
     round_1_end = time.time()  # default_timer()
-    
+
     # END OF ROUND 1
 
-    
+
     #------------- ROUND 2 ---------------------------
     round_2_start = time.time()  # default_timer()
 
@@ -90,19 +89,19 @@ def MR_kCenterOutliers(points, k, z, L):
 
     round_2_end = time.time()  # default_timer()
 
-    print(f'Time Round 1: {(round_1_end - round_1_start) * 1000} ms')
-    print(f'Time Round 2: {(round_2_end - round_2_start) * 1000} ms')
+    print("Time Round 1: ", str((round_1_end - round_1_start) * 1000), " ms")
+    print("Time Round 2: ", str((round_2_end - round_2_start) * 1000), " ms")
 
     return centers
 
 
 
-   
+
 
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 # Method extractCoreset: extract a coreset from a given iterator
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-def extractCoreset(iter, points):
+def extractCoreset(iter, points) -> list:
     partition = list(iter)
     centers = kCenterFFT(partition, points)
     weights = computeWeights(partition, centers)
@@ -112,9 +111,9 @@ def extractCoreset(iter, points):
         c_w.append(entry)
     # return weighted coreset
     return c_w
-    
-    
-    
+
+
+
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 # Method kCenterFFT: Farthest-First Traversal
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -176,21 +175,30 @@ def find_new_center_idx(input_size, Z_idxs, weights, distance_matrix, radius):
 def find_ball_indices(idx, idxs, distance_matrix, radius):
     return [z_idx for z_idx in idxs if distance_matrix[idx][z_idx] <= radius]
 
+def calc_pairwise_distances(P: np.ndarray) -> np.ndarray:
+    """ Return the matrix with the pairwise distances of hte points in the initial array"""
+    points_nr = len(P)
+    # Initialize distance matrix
+    distance_matrix = np.zeros((points_nr, points_nr), dtype=float)
+    # Loop to calculate the tri-diagonal upper matrix
+    for i in range(points_nr):
+        for j in range(i + 1, points_nr):
+            distance_matrix[i, j] = euclidean(P[i], P[j])
+    # Fill the tri-diagonal lower matrix
+    distance_matrix += distance_matrix.T
+    return distance_matrix
 
 def SeqWeightedOutliers(P, W, k, z, alpha):
-    # start = default_timer()
 
     # calc r_initial
     subset = P[: k + z + 1]
-    r_dist = pairwise_distances(subset)
-    r = np.min(r_dist[r_dist != 0]) / 2
-    r_initial = r
+    distance_matrix = calc_pairwise_distances(subset)  # pairwise_distances(subset)
+    r = r_initial = np.min(distance_matrix[distance_matrix != 0]) / 2
 
-    distances = pairwise_distances(P)
+    distances = calc_pairwise_distances(P) # pairwise_distances(P)
     n_guesses = 1
     input_size = len(P)
     while(True):
-        # P_idxs = [i for i in range(len(P))]
 
         Z_idxs = [i for i in range(len(P))]
         S_idxs = []
@@ -209,23 +217,14 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
                 Wz -= W[Bz_index]
 
         if Wz <= z:
-            # end = default_timer()
-
-            # print(f'Input size n = {input_size}')
-            # print(f'Number of centers k = {k}')
-            # print(f'Number of outliers z = {z}')
-            print(f'Initial guess = {r_initial}')
-            print(f'Final guess = {r}')
-            print(f'Number of guesses = {n_guesses}')
-            # print(f'Objective function = {ComputeObjective(P, P[S_idxs], len(Z_idxs))}')
-            # print(f'Time of SeqWeightedOutliers = {(end - start) * 1000}')
+            print("Initial guess ", r_initial)
+            print("Final guess ", r)
+            print("Number of guesses ", n_guesses)
 
             return P[S_idxs]
         else:
             r *= 2
             n_guesses += 1
-
-
 
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 # Method computeObjective: computes objective function
@@ -236,31 +235,17 @@ def euclidean_partition(iterator: list, centers: np.array, z: int) -> list:
     for point in iterator:
         dists_to_center = [euclidean(point, c) for c in centers]
         distance_list.append(min(dists_to_center))
-        # for center in centers:
-        #   distance_list.append(euclidean(point, center))
 
     # Collect with z
     distance_list.sort(reverse=True)
     return distance_list[:z+1]
 
-def computeObjective(points, centers, z):
-    #
-    # ****** ADD THE CODE FOR SeqWeightedOuliers from HW2
-    #
-    # Here we have to account, that InputPoints is
-    # a large pointset
-
-
+def compute_objective_test(input_points, centers: np.array, z: int):
     """ Test for computing the objective function with Map partitions """
-    distance_rdd = points.mapPartitions(lambda iterator: euclidean_partition(iterator, centers, z))
+    distance_rdd = input_points.mapPartitions(lambda iterator: euclidean_partition(iterator, centers, z))
     dists = distance_rdd.collect()
     dists.sort(reverse=True)
     return max(dists[z:])
-
-
-    # dists = [min([euclidean(x, center) for center in centers]) for x in points.collect()]
-    # dists.sort(reverse=True)
-    # return max(dists[z:])
 
 
 
@@ -293,10 +278,8 @@ def main(argv):
 
     start = time.time()
     inputPoints = sc.textFile(filename, L).map(lambda x: strToVector(x)).repartition(L).cache()
-    N = inputPoints.count()
     end = time.time()
-
-    # Pring input parameters
+    N = inputPoints.count()
     print("File : " + filename)
     print("Number of points N = ", N)
     print("Number of centers k = ", k)
@@ -308,12 +291,13 @@ def main(argv):
     solution = MR_kCenterOutliers(inputPoints, k, z, L)
 
     # Compute the value of the objective function
-    start = time.time()
-    objective = computeObjective(inputPoints, solution, z)
-    end = time.time()
+    startobjective = time.time()
+    objective = compute_objective_test(inputPoints, solution, z)
+    endobjective = time.time()
 
     print("Objective function = ", objective)
-    print("Time to compute objective function: ", str((end - start) * 1000), " ms")
+    print("Time to compute objective function: ", str((endobjective - startobjective) * 1000), " ms")
+
 
 def test():
     # Filepath, centers, outliers, partitions
@@ -346,4 +330,3 @@ if __name__ == "__main__":
 
     test()
     # main(sys.argv)
-
