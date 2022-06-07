@@ -166,15 +166,15 @@ def test():
     # main([' ', './artificial9000.txt', '9', '300'])
     # print()
 
-    main([' ', './uber-small.csv', '10', '100'])
-    print()
+    # main([' ', './uber-small.csv', '10', '100'])
+    # print()
 
-    main([' ', './uber-small.csv', '10', '0'])
-    print()
+    # main([' ', './uber-small.csv', '10', '0'])
+    # print()
 
 if __name__ == '__main__':
-    # test()
-    main(sys.argv)
+    test()
+    # main(sys.argv)
 
 
 

@@ -8,6 +8,7 @@ import sys
 import math
 from os.path import isfile
 from os import environ
+# from sklearn.metrics import pairwise_distances
 
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -174,7 +175,7 @@ def find_new_center_idx(input_size, Z_idxs, weights, distance_matrix, radius):
 def find_ball_indices(idx, idxs, distance_matrix, radius):
     return [z_idx for z_idx in idxs if distance_matrix[idx][z_idx] <= radius]
 
-def pairwise_distances(P: np.ndarray) -> np.ndarray:
+def calc_pairwise_distances(P: np.ndarray) -> np.ndarray:
     """ Return the matrix with the pairwise distances of hte points in the initial array"""
     points_nr = len(P)
     # Initialize distance matrix
@@ -191,10 +192,10 @@ def SeqWeightedOutliers(P, W, k, z, alpha):
 
     # calc r_initial
     subset = P[: k + z + 1]
-    distance_matrix = pairwise_distances(subset)
+    distance_matrix = calc_pairwise_distances(subset)  # pairwise_distances(subset)
     r = r_initial = np.min(distance_matrix[distance_matrix != 0]) / 2
 
-    distances = pairwise_distances(P)
+    distances = calc_pairwise_distances(P) # pairwise_distances(P)
     n_guesses = 1
     input_size = len(P)
     while(True):
@@ -232,8 +233,8 @@ def euclidean_partition(iterator: list, centers: np.array, z: int) -> list:
     """ Calculate the euclidean distance using the saprk partition function object"""
     distance_list = []
     for point in iterator:
-        for center in centers:
-            distance_list.append(euclidean(point, center))
+        dists_to_center = [euclidean(point, c) for c in centers]
+        distance_list.append(min(dists_to_center))
 
     # Collect with z
     distance_list.sort(reverse=True)
@@ -327,6 +328,5 @@ if __name__ == "__main__":
     environ['pyspark_python'] = sys.executable
     environ['pyspark_driver_python'] = sys.executable
 
-    #  test()
-
-    main(sys.argv)
+    test()
+    # main(sys.argv)
