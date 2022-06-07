@@ -303,6 +303,6 @@ if __name__ == "__main__":
     environ['pyspark_python'] = sys.executable
     environ['pyspark_driver_python'] = sys.executable
 
-    test()
+    # test()
 
-    # main(sys.argv)
+    main(sys.argv)
