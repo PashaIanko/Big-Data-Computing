@@ -9,36 +9,21 @@ import math
 from os.path import isfile
 from os import environ
 
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-# AUXILIARY METHODS
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-# Method strToVector: input reading
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 def strToVector(str):
     out = tuple(map(float, str.split(',')))
     return out
 
 
 
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-# Method squaredEuclidean: squared euclidean distance
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 def squaredEuclidean(point1,point2):
     res = 0
     for i in range(len(point1)):
         diff = (point1[i]-point2[i])
-        res +=  diff*diff
+        res += diff*diff
     return res
 
 
-
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-# Method euclidean:  euclidean distance
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 def euclidean(point1,point2):
     res = 0
     for i in range(len(point1)):
@@ -48,9 +33,6 @@ def euclidean(point1,point2):
 
 
 
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-# Method MR_kCenterOutliers: MR algorithm for k-center with outliers
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 def MR_kCenterOutliers(points, k, z, L):
 
 
@@ -58,6 +40,11 @@ def MR_kCenterOutliers(points, k, z, L):
     # Partition into L coresets
     round_1_start = time.time()  # default_timer()
     coreset = points.mapPartitions(lambda iterator: extractCoreset(iterator, k+z+1))
+    elems = coreset.collect()  # Avoid lazy evaluation
+
+    # _ = coreset.first() - also a way to make sure, transformations will
+    # be applied before measuring time
+
     round_1_end = time.time()  # default_timer()
 
     # END OF ROUND 1
@@ -66,7 +53,7 @@ def MR_kCenterOutliers(points, k, z, L):
     #------------- ROUND 2 ---------------------------
     round_2_start = time.time()  # default_timer()
 
-    elems = coreset.collect()
+
     coresetPoints = list()
     coresetWeights = list()
     for i in elems:
@@ -85,16 +72,12 @@ def MR_kCenterOutliers(points, k, z, L):
         z=z,
         alpha=2
     )
-
     round_2_end = time.time()  # default_timer()
 
     print("Time Round 1: ", str((round_1_end - round_1_start) * 1000), " ms")
     print("Time Round 2: ", str((round_2_end - round_2_start) * 1000), " ms")
 
     return centers
-
-
-
 
 
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -154,15 +137,6 @@ def computeWeights(points, centers):
         weights[mycenter] = weights[mycenter] + 1
     return weights
 
-
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-# Method SeqWeightedOutliers: sequential k-center with outliers
-# &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-# def SeqWeightedOutliers (points, weights, k, z, alpha):
-# #
-# # ****** ADD THE CODE FOR SeqWeightedOuliers from HW2
-# #
-#     pass
 
 def calc_ball_weight(idx, z_idxs, weights, distance_matrix, radius):
     return sum([weights[z_index] for z_index in z_idxs if distance_matrix[z_index][idx] <= radius])
@@ -300,6 +274,9 @@ def main(argv):
 def test():
     # Filepath, centers, outliers, partitions
 
+    # main([' ', './testdata.txt', '3', '3', '1'])
+    # print()
+
     main([' ', './testdataHW3.txt', '3', '3', '1'])
     print()
 
@@ -326,6 +303,6 @@ if __name__ == "__main__":
     environ['pyspark_python'] = sys.executable
     environ['pyspark_driver_python'] = sys.executable
 
-    #  test()
+    # test()
 
     main(sys.argv)
